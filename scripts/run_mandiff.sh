@@ -41,15 +41,18 @@ PROFILE_CHARTS_MAP["${ISTIO_SDS_PROFILE}"]="crds istio-control/istio-discovery i
 # declare map with profile as key and charts as values
 declare -A NAMESPACES_MAP
 NAMESPACES_MAP["crds"]="istio-system"
-NAMESPACES_MAP["istio-control/istio-discovery"]="istio-control"
-NAMESPACES_MAP["istio-control/istio-config"]="istio-control"
-NAMESPACES_MAP["istio-control/istio-autoinject"]="istio-control"
-NAMESPACES_MAP["gateways/istio-ingress"]="istio-control"
-NAMESPACES_MAP["gateways/istio-egress"]="istio-control"
-NAMESPACES_MAP["istio-telemetry/mixer-telemetry"]="istio-telemetry"
-NAMESPACES_MAP["istio-policy"]="istio-policy"
+NAMESPACES_MAP["istio-control/istio-discovery"]="istio-system"
+NAMESPACES_MAP["istio-control/istio-config"]="istio-system"
+NAMESPACES_MAP["istio-control/istio-autoinject"]="istio-system"
+NAMESPACES_MAP["gateways/istio-ingress"]="istio-system"
+NAMESPACES_MAP["gateways/istio-egress"]="istio-system"
+NAMESPACES_MAP["istio-telemetry/mixer-telemetry"]="istio-system"
+NAMESPACES_MAP["istio-policy"]="istio-system"
 NAMESPACES_MAP["security/citadel"]="istio-system"
 NAMESPACES_MAP["security/nodeagent"]="istio-system"
+
+# define the ingored resource list for manifest comparison
+MANDIFF_IGNORE_RESOURCE_LIST="ConfigMap::istio,ConfigMap::istio-sidecar-injector"
 
 # No unset vars, print commands as they're executed, and exit on any non-zero
 # return code
@@ -107,12 +110,12 @@ function mesh_mandiff_with_profile() {
     helm_manifest ${ISTIO_SYSTEM_NS} ${ISTIO_RELEASE} ${CHARTS_DIR} ${profile}
     mesh_manifest ${profile}
 
-    mesh manifest diff --directory "${OUT}/helm-template/istio-${profile}" "${OUT}/mesh-manifest/istio-${profile}"
+    mesh manifest diff --ignore "${MANDIFF_IGNORE_RESOURCE_LIST}" --directory "${OUT}/helm-template/istio-${profile}" "${OUT}/mesh-manifest/istio-${profile}"
 }
 
-mesh_mandiff_with_profile "${ISTIO_DEFAULT_PROFILE}" > "${OUT}/mandiff-default-profile.diff" || echo "default profile has diffs"
-mesh_mandiff_with_profile "${ISTIO_DEMO_PROFILE}" > "${OUT/}mandiff-demo-profile.diff" || echo "default profile has diffs"
-mesh_mandiff_with_profile "${ISTIO_DEMOAUTH_PROFILE}" > "${OUT}/mandiff-demoauth-profile.diff" || echo "default profile has diffs"
-mesh_mandiff_with_profile "${ISTIO_MINIMAL_PROFILE}" > "${OUT}/mandiff-minimal-profile.diff" || echo "default profile has diffs"
-mesh_mandiff_with_profile "${ISTIO_SDS_PROFILE}" > "${OUT}/mandiff-sds-profile.diff" || echo "default profile has diffs"
+mesh_mandiff_with_profile "${ISTIO_DEFAULT_PROFILE}" > "${OUT}/mandiff-default-profile.diff" || echo "${ISTIO_DEFAULT_PROFILE} profile has diffs"
+mesh_mandiff_with_profile "${ISTIO_DEMO_PROFILE}" > "${OUT}/mandiff-demo-profile.diff" || echo "${ISTIO_DEMO_PROFILE} profile has diffs"
+mesh_mandiff_with_profile "${ISTIO_DEMOAUTH_PROFILE}" > "${OUT}/mandiff-demoauth-profile.diff" || echo "${ISTIO_DEMOAUTH_PROFILE} profile has diffs"
+mesh_mandiff_with_profile "${ISTIO_MINIMAL_PROFILE}" > "${OUT}/mandiff-minimal-profile.diff" || echo "${ISTIO_MINIMAL_PROFILE} profile has diffs"
+mesh_mandiff_with_profile "${ISTIO_SDS_PROFILE}" > "${OUT}/mandiff-sds-profile.diff" || echo "${ISTIO_SDS_PROFILE} profile has diffs"
 

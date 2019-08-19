@@ -21,26 +21,29 @@ set -x
 set -e
 
 if [[ "$#" -ne 1 ]]; then
-    echo "Usage: sync_charts.sh <istio/installer branch-name>"
+    echo "Usage: run_update_charts.sh <sha or branch>"
 fi
 
-BRANCH="${1}"
+SHA="${1}"
 
-CHARTS_DIR=${GOPATH}/src/istio.io/installer
+INSTALLER_DIR=${GOPATH}/src/istio.io/installer
 OUT_DIR=${GOPATH}/src/istio.io/operator/data/charts
 
-if [[ ! -d "${CHARTS_DIR}" ]]; then
-    git clone https://github.com/istio/installer.git "${CHARTS_DIR}"
+if [[ ! -d "${INSTALLER_DIR}" ]]; then
+    git clone https://github.com/istio/installer.git "${INSTALLER_DIR}"
 fi
 
 pushd .
-cd "${CHARTS_DIR}"
-git checkout "${BRANCH}"
-git pull
+cd "${INSTALLER_DIR}"
+git fetch
+git checkout "${SHA}"
 popd
+
+# create charts directory if it doesn't exist.
+mkdir -p "${OUT_DIR}"
 
 for c in crds gateways istio-cni istiocoredns istio-telemetry istio-control istio-policy security
 do
-    cp -Rf "${CHARTS_DIR}/${c}" "${OUT_DIR}"
+    cp -Rf "${INSTALLER_DIR}/${c}" "${OUT_DIR}"
 done
 

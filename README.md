@@ -52,7 +52,7 @@ spec:
   profile: sds
 ```
 
-See [Select a profile](#select-a-profile) for more information.
+See [Select a specific configuration_profile](#select-a-specific-configuration-profile) for more information.
 
 If you don't specify a configuration profile, Istio is installed using the `default` configuration profile. All
 profiles listed in istio.io are available by default, or `profile:` can point to a local file path to reference a custom
@@ -78,7 +78,7 @@ This will create a binary called `mesh` in ${GOPATH}/bin. Ensure this is in your
 The `mesh` command supports the following flags:
 
 - `logtostderr`: log to console (by default logs go to ./mesh-cli.log).
-- `dry-run`: console output only, nothing applied to cluster or written to files (**default is true until the tool is robust enough**).
+- `dry-run`: console output only, nothing applied to cluster or written to files.
 - `verbose`: display entire manifest contents and other debug info (default is false).
 
 ### Quick tour of CLI commands 
@@ -104,7 +104,6 @@ levels representing a child dependency, use the following command:
 mesh manifest generate -o istio_manifests
 ```
 
-(Note that the default dry-run setting only writes the intended actions to log.)
 Use depth first search to traverse the created directory hierarchy when applying your YAML files. This is needed for
 correct sequencing of dependencies. Child manifest directories must wait for their parent directory to be fully applied,
 but not their sibling manifest directories.
@@ -117,9 +116,6 @@ dependencies to have the needed CRDs available:
 ```bash
 mesh manifest apply
 ```
-
-The default `dry-run=true` displays the manifest only. Set `dry-run=false` to apply the Istio configuration to Kubernetes.
-`--dry-run=false` to actually apply the generated configuration to the cluster.
 
 #### Review the values of a configuration profile
 
@@ -190,8 +186,8 @@ The compiled in charts and profiles are used by default, but you can specify a f
 apiVersion: install.istio.io/v1alpha2
 kind: IstioControlPlane
 spec:
-  profile: file:///usr/home/bob/go/src/github.com/ostromart/istio-installer/data/profiles/default.yaml
-  installPackagePath: file:///usr/home/bob/go/src/github.com/ostromart/istio-installer/data/charts/
+  profile: /usr/home/bob/go/src/github.com/ostromart/istio-installer/data/profiles/default.yaml
+  installPackagePath: /usr/home/bob/go/src/github.com/ostromart/istio-installer/data/charts/
 ```
 
 You can mix and match these approaches. For example, you can use a compiled-in configuration profile with charts in your
