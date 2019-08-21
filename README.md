@@ -8,7 +8,7 @@ The Istio operator CLI is now suitable for developers to evaluate and experiment
 [unassigned open issue](https://github.com/istio/istio/issues?q=is%3Aissue+is%3Aopen+label%3Aarea%2Fenvironments%2Foperator+no%3Aassignee),
 creating a [bug or feature request](https://github.com/istio/operator/blob/master/BUGS-AND-FEATURE-REQUESTS.md),
 or just coming to the weekly [Environments Working Group](https://github.com/istio/community/blob/master/WORKING-GROUPS.md)
-meeting to share your ideas. 
+meeting to share your ideas.
 
 This document is an overview of how the operator works from a user perspective. For more details about the design and
 architecture and a code overview, see [ARCHITECTURE.md](./ARCHITECTURE.md)
@@ -63,7 +63,16 @@ for details.
 
 The quick start describes how to install and use the operator `mesh` CLI command.
 
-### Installation
+### Building
+
+If you're trying to do a local build that bypasses the build container, you'll need to
+to execute the following step one time.
+
+```
+GO111MODULE=on go get github.com/jteeuwen/go-bindata/go-bindata@v3.0.8-0.20180305030458-6025e8de665b
+```
+
+To build the operator, simply:
 
 ```bash
 git clone https://github.com/istio/operator.git
@@ -81,7 +90,7 @@ The `mesh` command supports the following flags:
 - `dry-run`: console output only, nothing applied to cluster or written to files.
 - `verbose`: display entire manifest contents and other debug info (default is false).
 
-### Quick tour of CLI commands 
+### Quick tour of CLI commands
 
 #### Basic default manifest
 
@@ -91,8 +100,7 @@ The following command generates a manifest with the compiled in default profile 
 mesh manifest generate
 ```
 
-You can see these sources for the compiled in profiles in the repo under `data/profiles`, while the compiled in Helm
-charts are under `data/charts`. Note: this will change shortly. Charts/profiles will be released separately and the
+You can see these sources for the compiled in profiles in the repo under `data/profiles`. `Charts/profiles` will be released separately and the
 by default the mesh command will point to a version of the released charts.
 
 #### Output to dirs
@@ -122,8 +130,8 @@ mesh manifest apply
 The following commands show the values of a configuration profile:
 
 ```bash
-# show available profiles 
-mesh profile list 
+# show available profiles
+mesh profile list
 
 # show the values in demo profile
 mesh profile dump demo
@@ -232,15 +240,14 @@ spec:
   trafficManagement:
     components:
       pilot:
-        common:
-          k8s:
-            resources:
-              requests:
-                cpu: 1000m # override from default 500m
-                memory: 4096Mi # ... default 2048Mi
-            hpaSpec:
-              maxReplicas: 10 # ... default 5
-              minReplicas: 2  # ... default 1
+        k8s:
+          resources:
+            requests:
+              cpu: 1000m # override from default 500m
+              memory: 4096Mi # ... default 2048Mi
+          hpaSpec:
+            maxReplicas: 10 # ... default 5
+            minReplicas: 2  # ... default 1
 ```
 
 The K8s settings are defined in detail in the
@@ -251,10 +258,10 @@ way as galley settings. Supported K8s settings currently include:
 - [resources](https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#resource-requests-and-limits-of-pod-and-container)
 - [readiness probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/)
 - [replica count](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
-- [HoriizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+- [HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
 - [PodDisruptionBudget](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/#how-disruption-budgets-work)
 - [pod annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/)
-- [service annotations](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/)
+- [container environment variables](https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/)
 - [ImagePullPolicy](https://kubernetes.io/docs/concepts/containers/images/)
 - [priority calss name](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/#priorityclass)
 - [node selector](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector)
@@ -283,19 +290,18 @@ spec:
         level: "default:warning" # override from info
 ```
 
-Since from 1.3 Helm charts are split up per component, values overrides should be specified under the appropriate component
+Values overrides can also be specified for a particular component
  ([samples/values-pilot.yaml](samples/values-pilot.yaml)):
 
 ```yaml
 apiVersion: install.istio.io/v1alpha2
 kind: IstioControlPlane
 spec:
-  trafficManagement:
-    components:
-      pilot:
-        common:
-          values:
-            traceSampling: 0.1 # override from 1.0
+  values:
+    mixer:
+      telemetry:
+        loadshedding:
+          latencyThreshold: 200ms  
 ```
 
 ### Advanced K8s resource overlays
@@ -313,24 +319,22 @@ spec:
     enabled: true
     components:
       proxy:
-        common:
-          enabled: false
+        enabled: false
       pilot:
-        common:
-          k8s:
-            overlays:
-            - kind: Deployment
-              name: istio-pilot
-              patches:
-              - path: spec.template.spec.containers.[name:discovery].args.[30m]
-                value: "60m" # OVERRIDDEN
-              - path: spec.template.spec.containers.[name:discovery].ports.[containerPort:8080].containerPort
-                value: 8090 # OVERRIDDEN
-            - kind: Service
-              name: istio-pilot
-              patches:
-              - path: spec.ports.[name:grpc-xds].port
-                value: 15099 # OVERRIDDEN
+        k8s:
+          overlays:
+          - kind: Deployment
+            name: istio-pilot
+            patches:
+            - path: spec.template.spec.containers.[name:discovery].args.[30m]
+              value: "60m" # OVERRIDDEN
+            - path: spec.template.spec.containers.[name:discovery].ports.[containerPort:8080].containerPort
+              value: 8090 # OVERRIDDEN
+          - kind: Service
+            name: istio-pilot
+            patches:
+            - path: spec.ports.[name:grpc-xds].port
+              value: 15099 # OVERRIDDEN
 ```
 
 The user-defined overlay uses a path spec that includes the ability to select list items by key. In the example above,
