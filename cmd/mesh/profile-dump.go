@@ -53,7 +53,7 @@ func profileDumpCmd(rootArgs *rootArgs, pdArgs *profileDumpArgs) *cobra.Command 
 	return &cobra.Command{
 		Use:   "dump",
 		Short: "Dumps an Istio configuration profile.",
-		Long:  "The dump subcommand is used to dump the values in an Istio configuration profile.",
+		Long:  "The dump subcommand dumps the values in an Istio configuration profile.",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			l := newLogger(rootArgs.logToStdErr, cmd.OutOrStdout(), cmd.OutOrStderr())
@@ -97,7 +97,7 @@ func genProfile(helmValues bool, inFilename, profile, setOverlayYAML, configPath
 	}
 
 	// This contains the IstioControlPlane CR.
-	baseCRYAML, err := helm.ReadValuesYAML(profile)
+	baseCRYAML, err := helm.ReadProfileYAML(profile)
 	if err != nil {
 		return "", fmt.Errorf("could not read the profile values for %s: %s", profile, err)
 	}
@@ -108,7 +108,7 @@ func genProfile(helmValues bool, inFilename, profile, setOverlayYAML, configPath
 		if err != nil {
 			return "", err
 		}
-		defaultYAML, err := helm.ReadValuesYAML(dfn)
+		defaultYAML, err := helm.ReadProfileYAML(dfn)
 		if err != nil {
 			return "", fmt.Errorf("could not read the default profile values for %s: %s", dfn, err)
 		}

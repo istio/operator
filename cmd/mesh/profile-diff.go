@@ -29,7 +29,7 @@ func profileDiffCmd(rootArgs *rootArgs) *cobra.Command {
 	return &cobra.Command{
 		Use:   "diff",
 		Short: "Diffs two Istio configuration profiles.",
-		Long:  "The diff subcommand is used to display the difference between two Istio configuration profiles.",
+		Long:  "The diff subcommand displays the differences between two Istio configuration profiles.",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			profileDiff(rootArgs, args)
@@ -41,13 +41,13 @@ func profileDiffCmd(rootArgs *rootArgs) *cobra.Command {
 func profileDiff(rootArgs *rootArgs, args []string) {
 	initLogsOrExit(rootArgs)
 
-	a, err := helm.ReadValuesYAML(args[0])
+	a, err := helm.ReadProfileYAML(args[0])
 	if err != nil {
 		log.Errorf("could not read the profile values from %s: %s", args[0], err)
 		os.Exit(1)
 	}
 
-	b, err := helm.ReadValuesYAML(args[1])
+	b, err := helm.ReadProfileYAML(args[1])
 	if err != nil {
 		log.Errorf("could not read the profile values from %s: %s", args[1], err)
 		os.Exit(1)
