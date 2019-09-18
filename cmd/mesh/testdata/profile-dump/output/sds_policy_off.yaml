@@ -394,6 +394,7 @@ values:
       kubevirtInterfaces: ""
       logLevel: warning
       privileged: false
+      protocolDetectionTimeout: 1s
       readinessFailureThreshold: 30
       readinessInitialDelaySeconds: 1
       readinessPeriodSeconds: 2
@@ -553,8 +554,7 @@ values:
     env:
       CA_ADDR: istio-citadel:8060
       CA_PROVIDER: Citadel
-      Plugins: ""
-      VALID_TOKEN: "true"
+      VALID_TOKEN: true
     image: node-agent-k8s
   pilot:
     appNamespaces: []

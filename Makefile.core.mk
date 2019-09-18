@@ -22,7 +22,9 @@ pwd := $(shell pwd)
 # make targets
 .PHONY: lint test_with_coverage mandiff build fmt vfsgen update-charts
 
-lint: lint-copyright-banner lint-go
+build: mesh
+
+lint: lint-copyright-banner lint-go lint-python lint-scripts lint-yaml lint-dockerfiles
 
 test:
 	@go test -race ./...
@@ -34,8 +36,6 @@ test_with_coverage:
 mandiff: vfsgen
 	@PATH=${PATH}:${GOPATH}/bin scripts/run_mandiff.sh
 
-build: mesh
-
 fmt: format-go
 
 update-charts: installer.sha
@@ -43,7 +43,7 @@ update-charts: installer.sha
 
 # make target dependencies
 vfsgen: data/ update-charts
-	go run ./cmd/vfsgen/vfsgen.go
+	go generate ./...
 
 generate: generate-values generate-types vfsgen
 
@@ -56,9 +56,11 @@ mesh: vfsgen
 
 ########################
 
+TMPDIR := $(shell mktemp -d)
+
 repo_dir := .
-out_path = /tmp
-protoc = protoc -I/usr/include/protobuf -I.
+out_path = ${TMPDIR}
+protoc = protoc -Icommon-protos -I.
 
 go_plugin_prefix := --go_out=plugins=grpc,
 go_plugin := $(go_plugin_prefix):$(out_path)
@@ -67,7 +69,7 @@ python_output_path := python/istio_api
 protoc_gen_python_prefix := --python_out=,
 protoc_gen_python_plugin := $(protoc_gen_python_prefix):$(repo_dir)/$(python_output_path)
 
-protoc_gen_docs_plugin := --docs_out=warnings=true,emit_yaml=true,mode=html_page:$(repo_dir)/
+protoc_gen_docs_plugin := --docs_out=warnings=true,mode=html_fragment_with_front_matter:$(repo_dir)/
 
 types_v1alpha2_path := pkg/apis/istio/v1alpha2
 types_v1alpha2_protos := $(wildcard $(types_v1alpha2_path)/*.proto)
@@ -78,9 +80,9 @@ types_v1alpha2_openapi := $(types_v1alpha2_protos:.proto=.json)
 
 $(types_v1alpha2_pb_gos) $(types_v1alpha2_pb_docs) $(types_v1alpha2_pb_pythons): $(types_v1alpha2_protos)
 	@$(protoc) $(go_plugin) $(protoc_gen_docs_plugin)$(types_v1alpha2_path) $(protoc_gen_python_plugin) $^
-	@cp -r /tmp/pkg/* pkg/
+	@cp -r ${TMPDIR}/pkg/* pkg/
 	@sed -i -e 's|github.com/gogo/protobuf/protobuf/google/protobuf|github.com/gogo/protobuf/types|g' $(types_v1alpha2_path)/istiocontrolplane_types.pb.go
-	go run $(values_v1alpha2_path)/fixup_structs/main.go -f $(types_v1alpha2_path)/istiocontrolplane_types.pb.go
+	@GOARCH=amd64 GOOS=linux go run $(values_v1alpha2_path)/fixup_structs/main.go -f $(types_v1alpha2_path)/istiocontrolplane_types.pb.go
 
 generate-types: $(types_v1alpha2_pb_gos) $(types_v1alpha2_pb_docs) $(types_v1alpha2_pb_pythons)
 
@@ -96,9 +98,9 @@ values_v1alpha2_openapi := $(values_v1alpha2_protos:.proto=.json)
 
 $(values_v1alpha2_pb_gos) $(values_v1alpha2_pb_docs) $(values_v1alpha2_pb_pythons): $(values_v1alpha2_protos)
 	@$(protoc) $(go_plugin) $(protoc_gen_docs_plugin)$(values_v1alpha2_path) $(protoc_gen_python_plugin) $^
-	@cp -r /tmp/pkg/* pkg/
+	@cp -r ${TMPDIR}/pkg/* pkg/
 	@sed -i -e 's|github.com/gogo/protobuf/protobuf/google/protobuf|github.com/gogo/protobuf/types|g' $(values_v1alpha2_path)/values_types.pb.go
-	go run $(values_v1alpha2_path)/fixup_structs/main.go -f $(values_v1alpha2_path)/values_types.pb.go
+	@GOARCH=amd64 GOOS=linux go run $(values_v1alpha2_path)/fixup_structs/main.go -f $(values_v1alpha2_path)/values_types.pb.go
 
 generate-values: $(values_v1alpha2_pb_gos) $(values_v1alpha2_pb_docs) $(values_v1alpha2_pb_pythons)
 

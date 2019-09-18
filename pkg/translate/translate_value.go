@@ -57,6 +57,7 @@ var (
 				"{{.ValueComponentName}}.autoscaleEnabled":      "{{.FeatureName}}.Components.{{.ComponentName}}.K8s.HpaSpec",
 				"{{.ValueComponentName}}.imagePullPolicy":       "{{.FeatureName}}.Components.{{.ComponentName}}.K8s.ImagePullPolicy",
 				"{{.ValueComponentName}}.nodeSelector":          "{{.FeatureName}}.Components.{{.ComponentName}}.K8s.NodeSelector",
+				"{{.ValueComponentName}}.tolerations":           "{{.FeatureName}}.Components.{{.ComponentName}}.K8s.Tolerations",
 				"{{.ValueComponentName}}.podDisruptionBudget":   "{{.FeatureName}}.Components.{{.ComponentName}}.K8s.PodDisruptionBudget",
 				"{{.ValueComponentName}}.podAnnotations":        "{{.FeatureName}}.Components.{{.ComponentName}}.K8s.PodAnnotations",
 				"{{.ValueComponentName}}.priorityClassName":     "{{.FeatureName}}.Components.{{.ComponentName}}.K8s.PriorityClassName",
@@ -235,10 +236,6 @@ func (t *ReverseTranslator) setEnablementAndNamespacesFromValue(valueSpec map[st
 				return err
 			}
 		}
-		//vep := util.ToYAMLPath(cnv + ".enabled")
-		//if _, err := tpath.DeleteFromTree(valueSpec, vep, vep); err != nil {
-		//	return err
-		//}
 	}
 
 	// set namespace
