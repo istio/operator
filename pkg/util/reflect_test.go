@@ -23,79 +23,161 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-// TODO: add missing unit tests (istio/istio#17246).
-
 // to ptr conversion utility functions
 func toInt8Ptr(i int8) *int8 { return &i }
 
-var _ = Describe("IsValueNil", func() {
-	It("Should be true when nil", func() {
-		Expect(IsValueNil(nil)).To(BeTrue())
-	})
-	It("Should be true when nil", func() {
-		Expect(IsValueNil(nil)).To(BeTrue())
-	})
-	It("Should be true when ptr", func() {
-		Expect(IsValueNil((*int)(nil))).To(BeTrue())
-	})
-	It("Should be true when map", func() {
-		Expect(IsValueNil(map[int]int(nil))).To(BeTrue())
-	})
-	It("Should be true when slice", func() {
-		Expect(IsValueNil([]int(nil))).To(BeTrue())
-	})
-	It("Should be true when interface", func() {
-		Expect(IsValueNil(interface{}(nil))).To(BeTrue())
-	})
+var _ = Describe("Is functions", func() {
+	testInt := int8(4)
+	var interf interface{}
+	var sliceInterface interface{}
+	sliceInterface = []int{1, 2, 3}
 
-	It("Should be false when ptr", func() {
-		Expect(IsValueNil(toInt8Ptr(42))).To(BeFalse())
+	DescribeTable("success cases",
+		func(function func(v interface{}) bool, testVal interface{}) {
+			Expect(function(testVal)).To(BeTrue())
+		},
+		Entry("IsString", IsString, "hello"),
+		Entry("IsPtr", IsPtr, &testInt),
+		Entry("IsMap", IsMap, map[int]int{5: 5}),
+		Entry("IsMapPtr", IsMapPtr, &map[int]int{5: 5}),
+		Entry("IsSlice", IsSlice, []int{1, 2, 3}),
+		Entry("IsSlicePtr", IsSlicePtr, &[]int{1, 2, 3}),
+		Entry("IsStruct", IsStruct, struct{}{}),
+		Entry("IsSliceInterfacePtr", IsSliceInterfacePtr, &sliceInterface),
+		Entry("IsInterfacePtr", IsInterfacePtr, &interf),
+	)
+
+	DescribeTable("failure cases",
+		func(function func(v interface{}) bool, testVal interface{}) {
+			Expect(function(testVal)).To(BeFalse())
+		},
+		Entry("IsString", IsString, testInt),
+		Entry("IsPtr", IsPtr, "nope"),
+		Entry("IsMap", IsMap, "nope"),
+		Entry("IsMapPtr", IsMapPtr, "nope"),
+		Entry("IsMapPtr ptr but not map", IsMapPtr, &testInt),
+		Entry("IsSlice", IsSlice, "nope"),
+		Entry("IsSlicePtr", IsSlicePtr, "nope"),
+		Entry("IsSlicePtr ptr but not slice", IsSlicePtr, &testInt),
+		Entry("IsStruct", IsStruct, "nope"),
+		Entry("IsSliceInterfacePtr", IsSliceInterfacePtr, "nope"),
+		Entry("IsSliceInterfacePtr ptr but not interface", IsSliceInterfacePtr, &testInt),
+		Entry("IsSliceInterfacePtr interfacePtr but not slice", IsSliceInterfacePtr, &interf),
+		Entry("IsInterfacePtr", IsInterfacePtr, "nope"),
+		Entry("IsInterfacePtr ptr but not interface", IsInterfacePtr, &testInt),
+	)
+})
+
+var _ = Describe("IsType functions", func() {
+	testInt := int(42)
+	testStruct := struct{}{}
+	testSlice := []bool{}
+	testSliceOfInterface := []interface{}{}
+	testMap := map[bool]bool{}
+	var testNilSlice []bool
+	var testNilMap map[bool]bool
+
+	allTypes := []interface{}{nil, testInt, &testInt, testStruct, &testStruct, testNilSlice,
+		testSlice, &testSlice, testSliceOfInterface, testNilMap, testMap, &testMap}
+	typeNames := []string{"nil", "testInt", "&testInt", "testStruct", "&testStruct", "testNilSlice",
+		"testSlice", "&testSlice", "testSliceOfInterface", "testNilMap", "testMap", "&testMap"}
+
+	DescribeTable("function",
+		func(function func(v reflect.Type) bool, okTypes []interface{}) {
+			for index, v := range allTypes {
+				Expect(function(reflect.TypeOf(v))).To(Equal(isInListOfInterface(okTypes, v)), fmt.Sprintf("Unexpected response given %s", typeNames[index]))
+			}
+		},
+		Entry("IsTypeStruct", IsTypeStruct, []interface{}{testStruct}),
+		Entry("IsTypeStructPtr", IsTypeStructPtr, []interface{}{&testStruct}),
+		Entry("IsTypeSlice", IsTypeSlice, []interface{}{testNilSlice, testSlice, testSliceOfInterface}),
+		Entry("IsTypeSlicePtr", IsTypeSlicePtr, []interface{}{&testSlice}),
+		Entry("IsTypeMap", IsTypeMap, []interface{}{testNilMap, testMap}),
+		Entry("IsTypeInterface", IsTypeInterface, []interface{}{}),
+		Entry("IsTypeSliceOfInterface", IsTypeSliceOfInterface, []interface{}{testSliceOfInterface}),
+	)
+})
+
+var _ = Describe("IsTypeInterface", func() {
+	It("returns true when given an interface type", func() {
+		intf := &interfaceContainer{
+			I: &implementsInterface{
+				A: "a",
+			},
+		}
+		testIfField := reflect.ValueOf(intf).Elem().Field(0)
+
+		Expect(IsTypeInterface(testIfField.Type())).To(BeTrue())
 	})
-	It("Should be false when map", func() {
-		Expect(IsValueNil(map[int]int{42: 42})).To(BeFalse())
-	})
-	It("Should be false when slice", func() {
-		Expect(IsValueNil([]int{1, 2, 3})).To(BeFalse())
-	})
-	It("Should be false when interface", func() {
-		Expect(IsValueNil(interface{}(42))).To(BeFalse())
-	})
+})
+
+var _ = Describe("IsNilOrInvalidValue", func() {
+	i := 32
+	ip := &i
+	DescribeTable("true cases",
+		func(v interface{}) {
+			Expect(IsNilOrInvalidValue(reflect.ValueOf(v))).To(BeTrue())
+		},
+		Entry("nil", nil),
+		Entry("ptr", (*int)(nil)),
+		Entry("map", map[int]int(nil)),
+		Entry("slice", []int(nil)),
+		Entry("interface", interface{}(nil)),
+	)
+	DescribeTable("false cases",
+		func(v interface{}) {
+			Expect(IsNilOrInvalidValue(reflect.ValueOf(v))).To(BeFalse())
+		},
+		Entry("int(0)", int(0)),
+		Entry("\"\"", ""),
+		Entry("false", false),
+		Entry("ptr to ptr", &ip),
+	)
+})
+
+var _ = Describe("IsValueNil", func() {
+	DescribeTable("true cases",
+		func(v interface{}) {
+			Expect(IsValueNil(v)).To(BeTrue())
+		},
+		Entry("nil", nil),
+		Entry("ptr", (*int)(nil)),
+		Entry("map", map[int]int(nil)),
+		Entry("slice", []int(nil)),
+		Entry("interface", interface{}(nil)),
+	)
+
+	DescribeTable("false cases",
+		func(v interface{}) {
+			Expect(IsValueNil(v)).To(BeFalse())
+		},
+		Entry("ptr", toInt8Ptr(42)),
+		Entry("map", map[int]int{42: 42}),
+		Entry("slice", []int{1, 2, 3}),
+		Entry("interface", interface{}(42)),
+	)
 })
 
 var _ = Describe("IsValueNilOrDefault", func() {
-	It("Should be true when nil", func() {
-		Expect(IsValueNilOrDefault(nil)).To(BeTrue())
-	})
-	It("Should be true when ptr", func() {
-		Expect(IsValueNilOrDefault((*int)(nil))).To(BeTrue())
-	})
-	It("Should be true when map", func() {
-		Expect(IsValueNilOrDefault(map[int]int(nil))).To(BeTrue())
-	})
-	It("Should be true when slice", func() {
-		Expect(IsValueNilOrDefault([]int(nil))).To(BeTrue())
-	})
-	It("Should be true when interface", func() {
-		Expect(IsValueNilOrDefault(interface{}(nil))).To(BeTrue())
-	})
-	It("Should be true when int(0)", func() {
-		Expect(IsValueNilOrDefault(int(0))).To(BeTrue())
-	})
-	It("Should be true when \"\"", func() {
-		Expect(IsValueNilOrDefault("")).To(BeTrue())
-	})
-	It("Should be true when false", func() {
-		Expect(IsValueNilOrDefault(false)).To(BeTrue())
-	})
-
-	// It("Should be true when ptr to ptr", func() {
-	// 	i := 32
-	// 	ip := &i
-	// 	Expect(IsValueNilOrDefault(&ip)).To(BeTrue())
-	// })
+	i := 32
+	ip := &i
+	DescribeTable("true cases",
+		func(v interface{}) {
+			Expect(IsValueNilOrDefault(v)).To(BeTrue())
+		},
+		Entry("nil", nil),
+		Entry("ptr", (*int)(nil)),
+		Entry("map", map[int]int(nil)),
+		Entry("slice", []int(nil)),
+		Entry("interface", interface{}(nil)),
+		Entry("int(0)", int(0)),
+		Entry("\"\"", ""),
+		Entry("false", false),
+		Entry("ptr to ptr", IsValueNilOrDefault(&ip)),
+	)
 })
 
-var _ = Describe("IsValueFuncs", func() {
+var _ = Describe("IsValue functions", func() {
 	testInt := int(42)
 	testStruct := struct{}{}
 	testSlice := []bool{}
@@ -105,7 +187,7 @@ var _ = Describe("IsValueFuncs", func() {
 
 	allValues := []interface{}{nil, testInt, &testInt, testStruct, &testStruct, testNilSlice, testSlice, &testSlice, testNilMap, testMap, &testMap}
 
-	DescribeTable("function",
+	DescribeTable("all cases",
 		func(function func(v reflect.Value) bool, okValues []interface{}) {
 			for _, v := range allValues {
 				Context(fmt.Sprintf("With %v", v), func() {
@@ -114,13 +196,25 @@ var _ = Describe("IsValueFuncs", func() {
 			}
 		},
 		Entry("IsValuePtr", IsValuePtr, []interface{}{&testInt, &testStruct, &testSlice, &testMap}),
-		Entry("IsValueStruct", IsValueStruct, []interface{}{testStruct}),
 		Entry("IsValueInterface", IsValueInterface, []interface{}{}),
+		Entry("IsValueStruct", IsValueStruct, []interface{}{testStruct}),
 		Entry("IsValueStructPtr", IsValueStructPtr, []interface{}{&testStruct}),
 		Entry("IsValueMap", IsValueMap, []interface{}{testNilMap, testMap}),
 		Entry("IsValueSlice", IsValueSlice, []interface{}{testNilSlice, testSlice}),
 		Entry("IsValueScalar", IsValueScalar, []interface{}{testInt, &testInt}),
 	)
+})
+
+var _ = Describe("IsValueInterface", func() {
+	It("returns true when given an interface", func() {
+		intf := &interfaceContainer{
+			I: &implementsInterface{
+				A: "a",
+			},
+		}
+		iField := reflect.ValueOf(intf).Elem().FieldByName("I")
+		Expect(IsValueInterface(iField)).To(BeTrue())
+	})
 })
 
 var _ = Describe("ValuesAreSameType", func() {
@@ -137,79 +231,19 @@ var _ = Describe("ValuesAreSameType", func() {
 	)
 })
 
-var _ = Describe("IsTypeFuncs", func() {
-	testInt := int(42)
-	testStruct := struct{}{}
-	testSlice := []bool{}
-	testSliceOfInterface := []interface{}{}
-	testMap := map[bool]bool{}
-	var testNilSlice []bool
-	var testNilMap map[bool]bool
-
-	allTypes := []interface{}{nil, testInt, &testInt, testStruct, &testStruct, testNilSlice,
-		testSlice, &testSlice, testSliceOfInterface, testNilMap, testMap, &testMap}
-
-	DescribeTable("function",
-		func(function func(v reflect.Type) bool, okTypes []interface{}) {
-			for _, v := range allTypes {
-				Expect(function(reflect.TypeOf(v))).To(Equal(isInListOfInterface(okTypes, v)))
-			}
+var _ = Describe("IsEmptyString", func() {
+	emptystring := ""
+	DescribeTable("all cases",
+		func(val interface{}, want bool) {
+			got := IsEmptyString(val)
+			Expect(got).To(Equal(want))
 		},
-		Entry("IsTypeStructPtr", IsTypeStructPtr, []interface{}{&testStruct}),
-		Entry("IsTypeSlicePtr", IsTypeSlicePtr, []interface{}{&testSlice}),
-		Entry("IsTypeMap", IsTypeMap, []interface{}{testNilMap, testMap}),
-		Entry("IsTypeInterface", IsTypeInterface, []interface{}{}),
-		Entry("IsTypeSliceOfInterface", IsTypeSliceOfInterface, []interface{}{testSliceOfInterface}),
+		Entry("true empty string", emptystring, true),
+		Entry("true nil", nil, true),
+		Entry("false ptr to emptystring", &emptystring, false),
+		Entry("false not empty string", "nope", false),
 	)
 })
-
-type interfaceContainer struct {
-	I anInterface
-}
-
-type anInterface interface {
-	IsU()
-}
-
-type implementsInterface struct {
-	A string
-}
-
-func (*implementsInterface) IsU() {}
-
-var _ = Describe("IsValueInterface", func() {
-	It("returns true when given an interface", func() {
-		intf := &interfaceContainer{
-			I: &implementsInterface{
-				A: "a",
-			},
-		}
-		iField := reflect.ValueOf(intf).Elem().FieldByName("I")
-		Expect(IsValueInterface(iField)).To(BeTrue())
-	})
-})
-
-var _ = Describe("IsTypeInterface", func() {
-	It("returns true when given an interface type", func() {
-		intf := &interfaceContainer{
-			I: &implementsInterface{
-				A: "a",
-			},
-		}
-		testIfField := reflect.ValueOf(intf).Elem().Field(0)
-
-		Expect(IsTypeInterface(testIfField.Type())).To(BeTrue())
-	})
-})
-
-func isInListOfInterface(lv []interface{}, v interface{}) bool {
-	for _, vv := range lv {
-		if reflect.DeepEqual(vv, v) {
-			return true
-		}
-	}
-	return false
-}
 
 var _ = Describe("DeleteFromSlicePtr", func() {
 	It("deletes from a slice ptr at a given index", func() {
@@ -283,6 +317,19 @@ var _ = Describe("integer functions", func() {
 		allTypes        = append(allIntegerTypes, nonIntTypes...)
 	)
 
+	Context("ToIntValue", func() {
+		It("returns the int value of the given arg, or false", func() {
+			var got []int
+			for _, v := range allTypes {
+				if i, ok := ToIntValue(v); ok {
+					got = append(got, i)
+				}
+			}
+			want := []int{-42, -43, -44, -45, -46, 42, 43, 44, 45, 46}
+			Expect(got).To(Equal(want))
+		})
+	})
+
 	DescribeTable("IsIntKind and IsUintKind",
 		func(function func(v reflect.Kind) bool, want []interface{}) {
 			var got []interface{}
@@ -296,17 +343,28 @@ var _ = Describe("integer functions", func() {
 		Entry("ints", IsIntKind, allIntTypes),
 		Entry("uints", IsUintKind, allUintTypes),
 	)
-
-	Context("ToIntValue", func() {
-		It("returns the int value of the given arg, or false", func() {
-			var got []int
-			for _, v := range allTypes {
-				if i, ok := ToIntValue(v); ok {
-					got = append(got, i)
-				}
-			}
-			want := []int{-42, -43, -44, -45, -46, 42, 43, 44, 45, 46}
-			Expect(got).To(Equal(want))
-		})
-	})
 })
+
+type interfaceContainer struct {
+	I anInterface
+}
+
+type anInterface interface {
+	IsU()
+}
+
+type implementsInterface struct {
+	A string
+}
+
+func (*implementsInterface) IsU() {}
+
+func isInListOfInterface(lv []interface{}, v interface{}) bool {
+	for _, vv := range lv {
+		if reflect.DeepEqual(vv, v) {
+			return true
+		}
+	}
+	return false
+}
+

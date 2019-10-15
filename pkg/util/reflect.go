@@ -72,6 +72,9 @@ func IsInterfacePtr(v interface{}) bool {
 
 // IsTypeStruct reports whether t is a struct type.
 func IsTypeStruct(t reflect.Type) bool {
+	if t == reflect.TypeOf(nil) {
+		return false
+	}
 	return t.Kind() == reflect.Struct
 }
 
@@ -85,6 +88,9 @@ func IsTypeStructPtr(t reflect.Type) bool {
 
 // IsTypeSlice reports whether v is a slice type.
 func IsTypeSlice(t reflect.Type) bool {
+	if t == reflect.TypeOf(nil) {
+		return false
+	}
 	return t.Kind() == reflect.Slice
 }
 
