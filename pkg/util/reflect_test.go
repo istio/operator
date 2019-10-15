@@ -29,8 +29,7 @@ func toInt8Ptr(i int8) *int8 { return &i }
 var _ = Describe("Is functions", func() {
 	testInt := int8(4)
 	var interf interface{}
-	var sliceInterface interface{}
-	sliceInterface = []int{1, 2, 3}
+	var sliceInterface interface{} = []int{1, 2, 3}
 
 	DescribeTable("success cases",
 		func(function func(v interface{}) bool, testVal interface{}) {
@@ -367,4 +366,3 @@ func isInListOfInterface(lv []interface{}, v interface{}) bool {
 	}
 	return false
 }
-
