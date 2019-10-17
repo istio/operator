@@ -1,4 +1,4 @@
-# Istio operator code overview
+# Istio operator code overview.
 
 ## Introduction
 
