@@ -1,7 +1,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/istio/operator)](https://goreportcard.com/report/github.com/istio/operator)
 [![GolangCI](https://golangci.com/badges/github.com/istio/operator.svg)](https://golangci.com/r/github.com/istio/operator)
 
-# Istio Operator
+# Istio Operator.
 
 The Istio operator CLI is now suitable for developers to evaluate and experiment with. You can
 [contribute](CONTRIBUTING.md) by picking an
