@@ -37312,6 +37312,8 @@ spec:
     global:
       disablePolicyChecks: false
       controlPlaneSecurityEnabled: false
+      mtls:
+        auto: true
       proxy:
         accessLogFile: /dev/stdout
         resources:
