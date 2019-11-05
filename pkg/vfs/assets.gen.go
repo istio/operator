@@ -8536,7 +8536,11 @@ spec:
         # This container installs the Istio CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: {{ .Values.cni.hub }}/{{ .Values.cni.image }}:{{ .Values.cni.tag }}
+{{- if contains "/" .Values.cni.image }}
+          image: "{{ .Values.cni.image }}"
+{{- else }}
+          image: "{{ .Values.cni.hub | default .Values.global.hub }}/{{ .Values.cni.image | default "install-cni" }}:{{ .Values.cni.tag | default .Values.global.tag }}"
+{{- end }}
           imagePullPolicy: {{ .Values.cni.pullPolicy | default .Values.global.imagePullPolicy }}
           command: ["/install-cni.sh"]
           env:
@@ -8615,8 +8619,8 @@ func chartsIstioCniTemplatesServiceaccountYaml() (*asset, error) {
 }
 
 var _chartsIstioCniValuesYaml = []byte(`cni:
-  hub: gcr.io/istio-testing
-  tag: 1.4-dev
+  hub: ""
+  tag: ""
   image: install-cni
   pullPolicy: Always
 
