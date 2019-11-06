@@ -11318,6 +11318,26 @@ rules:
     - "certificatesigningrequests/status"
   verbs: ["update", "create", "get", "delete"]
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: istio-reader-{{ .Release.Namespace }}
+  labels:
+    app: istio-reader
+    release: {{ .Release.Name }}
+rules:
+- apiGroups:
+  - "config.istio.io"
+  - "rbac.istio.io"
+  - "security.istio.io"
+  - "networking.istio.io"
+  - "authentication.istio.io"
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["endpoints", "pods", "services", "nodes", "replicationcontrollers"]
+  verbs: ["get", "list", "watch"]
+---
 {{ end }}
 `)
 
@@ -11662,15 +11682,18 @@ data:
     sdsUdsPath: {{ .Values.global.sds.udsPath | quote }}
 
     {{- else }}
+
     # Set expected values when SDS is disabled
     # Unix Domain Socket through which envoy communicates with NodeAgent SDS to get
     # key/cert for mTLS. Use secret-mount files instead of SDS if set to empty.
     sdsUdsPath: ""
+
     # This flag is used by secret discovery service(SDS).
     # If set to true(prerequisite: https://kubernetes.io/docs/concepts/storage/volumes/#projected), Istio will inject volumes mount
     # for k8s service account JWT, so that K8s API server mounts k8s service account JWT to envoy container, which
     # will be used to generate key/cert eventually. This isn't supported for non-k8s case.
     enableSdsTokenMount: false
+
     # This flag is used by secret discovery service(SDS).
     # If set to true, envoy will fetch normal k8s service account JWT from '/var/run/secrets/kubernetes.io/serviceaccount/token'
     # (https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod)
@@ -28424,6 +28447,7 @@ rules:
       - namespaces
       - nodes
       - pods
+      - pods/log
       - services
       - replicationcontrollers
     verbs:
@@ -28489,6 +28513,7 @@ rules:
       - namespaces
       - nodes
       - pods
+      - pods/log
       - services
       - replicationcontrollers
     verbs:
@@ -32571,21 +32596,10 @@ func chartsIstioTelemetryPrometheusTemplatesDeploymentYaml() (*asset, error) {
 var _chartsIstioTelemetryPrometheusTemplatesDestinationRuleYaml = []byte(`apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: prometheys
+  name: prometheus
   namespace: {{ .Release.Namespace }}
 spec:
-  host: prometheus.{{ .Release.Namespace }}
-  trafficPolicy:
-    tls:
-      mode: DISABLE
----
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: prometheus-full
-  namespace: {{ .Release.Namespace }}
-spec:
-  host: prometheus.{{ .Release.Namespace }}.svc.cluster.local
+  host: prometheus
   trafficPolicy:
     tls:
       mode: DISABLE
@@ -33096,18 +33110,7 @@ metadata:
   name: prometheus
   namespace: {{ .Release.Namespace }}
 spec:
-  host: prometheus.{{ .Release.Namespace }}
-  trafficPolicy:
-    tls:
-      mode: DISABLE
----
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: prometheus-full
-  namespace: {{ .Release.Namespace }}
-spec:
-  host: prometheus.{{ .Release.Namespace }}.svc.cluster.local
+  host: prometheus
   trafficPolicy:
     tls:
       mode: DISABLE
@@ -35653,8 +35656,8 @@ spec:
             - --root-cert=/etc/cacerts/root-cert.pem
             - --cert-chain=/etc/cacerts/cert-chain.pem
           {{- end }}
-          {{- if .Values.security.trustDomain }}
-            - --trust-domain={{ .Values.security.trustDomain }}
+          {{- if .Values.global.trustDomain }}
+            - --trust-domain={{ .Values.global.trustDomain }}
           {{- end }}
           {{- if .Values.security.workloadCertTtl }}
             - --workload-cert-ttl={{ .Values.security.workloadCertTtl }}
@@ -35831,7 +35834,6 @@ security:
   rollingMaxUnavailable: 25%
   image: citadel
   selfSigned: true # indicate if self-signed CA is used.
-  trustDomain: cluster.local # indicate the domain used in SPIFFE identity URL
 
   # 90*24hour = 2160h
   workloadCertTtl: 2160h
@@ -37122,9 +37124,6 @@ func profilesDefaultYaml() (*asset, error) {
 var _profilesDemoAuthYaml = []byte(`apiVersion: install.istio.io/v1alpha2
 kind: IstioControlPlane
 spec:
-  hub: gcr.io/istio-testing
-  tag: 1.4-dev
-  defaultNamespace: istio-system
   gateways:
     components:
       egressGateway:
@@ -37254,9 +37253,6 @@ func profilesDemoAuthYaml() (*asset, error) {
 var _profilesDemoYaml = []byte(`apiVersion: install.istio.io/v1alpha2
 kind: IstioControlPlane
 spec:
-  hub: gcr.io/istio-testing
-  tag: 1.4-dev
-  defaultNamespace: istio-system
   gateways:
     components:
       egressGateway:
@@ -37386,9 +37382,6 @@ func profilesDemoYaml() (*asset, error) {
 var _profilesMinimalYaml = []byte(`apiVersion: install.istio.io/v1alpha2
 kind: IstioControlPlane
 spec:
-  hub: gcr.io/istio-testing
-  tag: 1.4-dev
-  defaultNamespace: istio-system
   policy:
     enabled: false
 
@@ -37494,9 +37487,6 @@ func profilesRemoteYaml() (*asset, error) {
 var _profilesSdsYaml = []byte(`apiVersion: install.istio.io/v1alpha2
 kind: IstioControlPlane
 spec:
-  hub: gcr.io/istio-testing
-  tag: 1.4-dev
-  defaultNamespace: istio-system
   security:
     components:
       nodeAgent:
