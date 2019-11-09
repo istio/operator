@@ -40,6 +40,11 @@ configManagement:
             maxUnavailable: 25%
         tolerations: []
   enabled: true
+coreDNS:
+  components:
+    coreDNS:
+      enabled: false
+  enabled: false
 gateways:
   components:
     egressGateway:
@@ -275,6 +280,7 @@ values:
         secretName: istio-egressgateway-ca-certs
       type: ClusterIP
       zvpn:
+        enabled: true
         suffix: global
     istio-ingressgateway:
       applicationPorts: ""
@@ -318,6 +324,7 @@ values:
         port: 15443
         targetPort: 15443
       sds:
+        enabled: false
         image: node-agent-k8s
         resources:
           limits:
@@ -336,27 +343,32 @@ values:
       telemetry_addon_gateways:
         grafana_gateway:
           desPort: 3000
+          enabled: false
           name: grafana
           port: 15031
           tls: false
         kiali_gateway:
           desPort: 20001
+          enabled: false
           name: kiali
           port: 15029
           tls: false
         prometheus_gateway:
           desPort: 9090
+          enabled: false
           name: prometheus
           port: 15030
           tls: false
         tracing_gateway:
           desPort: 80
+          enabled: false
           name: tracing
           port: 15032
           tls: false
       telemetry_domain_name: ""
       type: LoadBalancer
       zvpn:
+        enabled: true
         suffix: global
   global:
     arch:
@@ -478,7 +490,6 @@ values:
   istiocoredns:
     coreDNSImage: coredns/coredns:1.1.2
     coreDNSPluginImage: istio/coredns-plugin:0.2-istio-1.1
-    enabled: false
     podAntiAffinityLabelSelector: []
     podAntiAffinityTermLabelSelector: []
     replicaCount: 1
@@ -510,6 +521,9 @@ values:
     tolerations: []
   mixer:
     policy:
+      adapters:
+        kubernetesenv:
+          enabled: true
       image: mixer
     telemetry:
       image: mixer
