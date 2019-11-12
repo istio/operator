@@ -7934,8 +7934,7 @@ func chartsGatewaysIstioIngressTemplatesHostsYaml() (*asset, error) {
 	return a, nil
 }
 
-var _chartsGatewaysIstioIngressTemplatesMeshexpansionYaml = []byte(`{{ $gateway := index .Values "gateways" "istio-ingressgateway" }}
-{{- if .Values.global.meshExpansion.enabled }}
+var _chartsGatewaysIstioIngressTemplatesMeshexpansionYaml = []byte(`{{- if .Values.global.meshExpansion.enabled }}
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
@@ -7975,7 +7974,7 @@ spec:
   - meshexpansion-gateway
   tcp:
   - match:
-    - port: {{ $gateway.externalPort }}
+    - port: 15011
     route:
     - destination:
         host: istio-pilot.{{ .Values.global.istioNamespace }}.svc.{{ .Values.global.proxy.clusterDomain }}
