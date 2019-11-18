@@ -37748,14 +37748,18 @@ spec:
   values:
     global:
       useMCP: false
+      controlPlaneSecurityEnabled: false
       proxy:
         envoyStatsd:
           enabled: false
           host:
           port:
+      mtls:
+        auto: false
 
     pilot:
       sidecar: false
+      useMCP: false
 
     prometheus:
       enabled: false
