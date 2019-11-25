@@ -29769,8 +29769,6 @@ spec:
       valueType: BOOL
     quota.cache_hit:
       valueType: BOOL
-    context.proxy_version:
-      valueType: STRING
 
 ---
 apiVersion: "config.istio.io/v1alpha2"
@@ -34580,7 +34578,7 @@ spec:
   type: {{ .Values.tracing.service.type }}
   ports:
     - name: {{ .Values.tracing.service.name }}
-      port: {{ .Values.tracing.service.externalPort }}
+      port: 80
       protocol: TCP
 {{ if eq .Values.tracing.provider "jaeger" }}
       targetPort: 16686

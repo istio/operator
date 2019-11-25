@@ -8702,8 +8702,6 @@ spec:
       valueType: BOOL
     quota.cache_hit:
       valueType: BOOL
-    context.proxy_version:
-      valueType: STRING
 ---
 
 
