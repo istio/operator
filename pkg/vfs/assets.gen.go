@@ -36878,10 +36878,6 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
-            - name: PILOT_TRACE_SAMPLING
-              value: "1"
-            - name: CONFIG_NAMESPACE
-              value: istio-config
           hpaSpec:
             maxReplicas: 5
             minReplicas: 1
@@ -37281,6 +37277,8 @@ spec:
         reportBatchMaxEntries: 100
         reportBatchMaxTime: 1s
         useMCP: true
+        env:
+          GOMAXPROCS: "6"
         nodeSelector: {}
         tolerations: []
         podAntiAffinityLabelSelector: []
