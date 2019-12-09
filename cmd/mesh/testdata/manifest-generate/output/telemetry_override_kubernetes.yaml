@@ -6386,7 +6386,6 @@ spec:
   selector:
     matchLabels:
       app: telemetry
-      release: istio
       istio: mixer
       istio-mixer-type: telemetry
 ---
