@@ -116,6 +116,12 @@ message CertManagerConfig {
   string podDnsPolicy = 10;
 
   TypeMapStringInterface podDnsConfig = 11;
+
+  TypeSliceOfMapStringInterface podAntiAffinityLabelSelector = 12 [deprecated=true];
+
+  TypeSliceOfMapStringInterface podAntiAffinityTermLabelSelector = 13 [deprecated=true];
+
+  TypeSliceOfMapStringInterface tolerations = 14 [deprecated=true];
 }
 
 // Mirrors Resources for unmarshaling.
@@ -207,7 +213,7 @@ message EgressGatewayConfig {
   google.protobuf.BoolValue enabled = 7;
 
   // Environment variables passed to the proxy container.
-  map<string, string> env = 8;
+  TypeMapStringInterface env = 8;
 
   GatewayLabelsConfig labels = 9;
 
@@ -269,6 +275,8 @@ message EgressGatewayConfig {
 
   // Enables cross-cluster access using SNI matching.
   ZeroVPNConfig zvpn = 19;
+
+  TypeSliceOfMapStringInterface tolerations = 20 [deprecated=true];
 }
 
 // EnvoyMetricsConfig is a set of configuration options for Envoy metrics.
@@ -324,6 +332,8 @@ message GalleyConfig {
 
   // K8s rolling update strategy
   TypeIntOrStringForPB rollingMaxUnavailable = 10 [deprecated=true];
+
+  TypeSliceOfMapStringInterface tolerations = 11 [deprecated=true];
 }
 
 // GatewayLabelsConfig is a set of Configuration for gateway labels.
@@ -593,7 +603,7 @@ message IngressGatewayConfig {
   google.protobuf.BoolValue enabled = 10;
 
   // Environment variables passed to the proxy container.
-  map<string, string> env = 11;
+  TypeMapStringInterface env = 11;
 
   repeated string externalIPs = 12;
 
@@ -661,6 +671,20 @@ message IngressGatewayConfig {
 
   // Ports to explicitly check for readiness
   string applicationPorts = 33;
+
+  string externalTrafficPolicy = 34;
+
+  TypeSliceOfMapStringInterface tolerations = 35 [deprecated=true];
+
+  TypeSliceOfMapStringInterface ingressPorts = 36;
+
+  TypeSliceOfMapStringInterface additionalContainers = 37;
+
+  TypeSliceOfMapStringInterface configVolumes = 38;
+
+  google.protobuf.BoolValue certificates = 39;
+
+  google.protobuf.BoolValue tls = 40;
 }
 
 // Secret Discovery Service (SDS) Configuration for ingress gateway.
@@ -859,7 +883,7 @@ message MixerTelemetryConfig {
   // env:
   //   ENV_VAR_1: value1
   //   ENV_VAR_2: value2
-  map<string, string> env = 7;
+  TypeMapStringInterface env = 7;
 
   // Image name used for Mixer Telemetry.
   //
@@ -1056,7 +1080,7 @@ message PilotConfig {
   // env:
   //   ENV_VAR_1: value1
   //   ENV_VAR_2: value2
-  map<string, string> env = 21;
+  TypeMapStringInterface env = 21;
 
   // Controls whether Istio policy is applied to Pilot.
   PilotPolicyConfig policy = 22;
@@ -1522,6 +1546,8 @@ message SecurityConfig {
 
   // How long workload certs are valid for
   string workloadCertTtl = 13;
+
+  TypeSliceOfMapStringInterface tolerations = 14 [deprecated=true];
 }
 
 // ServiceConfig is described in istio.io documentation.
@@ -1595,6 +1621,8 @@ message SidecarInjectorConfig {
 
   // Enable objectSelector to filter out pods with no need for sidecar before calling istio-sidecar-injector.
   TypeMapStringInterface objectSelector = 21;
+
+  TypeSliceOfMapStringInterface tolerations = 22 [deprecated=true];
 }
 
 // Configuration for stdio adapter in mixer, recommended for debug usage only.
@@ -1710,6 +1738,8 @@ message TracingConfig {
 
   // See EgressGatewayConfig.
   TypeSliceOfMapStringInterface podAntiAffinityTermLabelSelector = 14 [deprecated=true];
+
+  TypeSliceOfMapStringInterface tolerations = 15 [deprecated=true];
 }
 
 message TracingOpencensusConfig {
@@ -1897,6 +1927,8 @@ message KialiConfig {
 
   // See PodAntiAffinityLabelSelector.
   TypeSliceOfMapStringInterface podAntiAffinityTermLabelSelector = 13 [deprecated=true];
+
+  TypeSliceOfMapStringInterface tolerations = 14 [deprecated=true];
 }
 
 message Values {
