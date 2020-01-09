@@ -31,6 +31,7 @@ import (
 	"istio.io/operator/pkg/compare"
 	"istio.io/operator/pkg/hooks"
 	"istio.io/operator/pkg/manifest"
+	pkgversion "istio.io/operator/pkg/version"
 	opversion "istio.io/operator/version"
 	"istio.io/pkg/log"
 )
@@ -133,19 +134,17 @@ func upgrade(rootArgs *rootArgs, args *upgradeArgs, l *logger) (err error) {
 	// Generate ICPS objects
 	_, targetICPS, err := genICPS(args.inFilename, "", "", args.force, l)
 	if err != nil {
-		return fmt.Errorf("failed to generate ICPS from file %s, error: %s", args.inFilename, err)
+		return fmt.Errorf("failed to generate upgrade specs from file %s, error: %s", args.inFilename, err)
 	}
 
 	// Get the target version from the tag in the ICPS
-	targetVersion := targetICPS.GetTag()
-	if targetVersion != opversion.OperatorVersionString {
+	targetTag := targetICPS.GetTag()
+	targetVersion, err := pkgversion.TagToVersionString(targetTag)
+	if err != nil {
 		if !args.force {
-			return fmt.Errorf("the target version %v is not supported by istioctl %v, "+
-				"please download istioctl %v and run upgrade again", targetVersion,
-				opversion.OperatorVersionString, targetVersion)
+			return fmt.Errorf("failed to convert the target tag '%s' into a valid version, "+
+				"you can use --force flag to skip the version check if you know the tag is correct", targetTag)
 		}
-		l.logAndPrintf("Warning. The target version %v does not equal to the binary version %v",
-			targetVersion, opversion.OperatorVersionString)
 	}
 	l.logAndPrintf("Upgrade - target version: %s\n", targetVersion)
 
@@ -178,11 +177,7 @@ func upgrade(rootArgs *rootArgs, args *upgradeArgs, l *logger) (err error) {
 		return fmt.Errorf("upgrade version check failed: %v -> %v. Error: %v",
 			currentVersion, targetVersion, err)
 	}
-	l.logAndPrintf("Upgrade version check passed: %v -> %v.\n", currentVersion, targetVersion)
 
-	// Read the overridden values from args.inFilename
-	// TODO: Is this correct? Seems to be checking only the overlays under global. Other parts in ICPS can be
-	// overlaid too.
 	overrideValues, _, err := genOverlayICPS(args.inFilename, args.force)
 	if err != nil {
 		return fmt.Errorf("failed to generate override values from file: %v, error: %v", args.inFilename, err)
