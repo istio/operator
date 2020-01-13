@@ -6695,7 +6695,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: istio-multicluster-destinationrule
+  name: istio-multicluster-egressgateway
   namespace: {{ .Release.Namespace }}
   labels:
     app: istio-egressgateway
@@ -8041,7 +8041,7 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: istio-multicluster-destinationrule
+  name: istio-multicluster-ingressgateway
   namespace: {{ .Release.Namespace }}
   labels:
     app: istio-ingressgateway
@@ -8944,14 +8944,18 @@ var _chartsIstioControlIstioAutoinjectFilesInjectionTemplateYaml = []byte(`templ
     resources: {}
   {{- end }}
     securityContext:
-      runAsUser: 0
-      runAsNonRoot: false
+      allowPrivilegeEscalation: {{ .Values.global.proxy.privileged }}
       capabilities:
         add:
         - NET_ADMIN
-      {{- if .Values.global.proxy.privileged }}
-      privileged: true
-      {{- end }}
+        - NET_RAW
+        drop:
+        - ALL
+      privileged: {{ .Values.global.proxy.privileged }}
+      readOnlyRootFilesystem: false
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
     restartPolicy: Always
   {{- end }}
   {{  end -}}
@@ -8970,9 +8974,17 @@ var _chartsIstioControlIstioAutoinjectFilesInjectionTemplateYaml = []byte(`templ
     imagePullPolicy: "{{ valueOrDefault .Values.global.imagePullPolicy `+"`"+`Always`+"`"+` }}"
     resources: {}
     securityContext:
-      runAsUser: 0
-      runAsNonRoot: false
+      allowPrivilegeEscalation: true
+      capabilities:
+        add:
+        - SYS_ADMIN
+        drop:
+        - ALL
       privileged: true
+      readOnlyRootFilesystem: false
+      runAsGroup: 0
+      runAsNonRoot: false
+      runAsUser: 0
   {{ end }}
   {{- end }}
   containers:
@@ -9068,6 +9080,10 @@ var _chartsIstioControlIstioAutoinjectFilesInjectionTemplateYaml = []byte(`templ
   {{- if (isset .ObjectMeta.Annotations `+"`"+`sidecar.istio.io/bootstrapOverride`+"`"+`) }}
     - --templateFile=/etc/istio/custom-bootstrap/envoy_bootstrap.json
   {{- end }}
+  {{- if .Values.global.proxy.lifecycle }}
+    lifecycle:
+      {{ toYaml .Values.global.proxy.lifecycle | indent 4 }}
+    {{- end }}
     env:
     - name: POD_NAME
       valueFrom:
@@ -9180,21 +9196,22 @@ var _chartsIstioControlIstioAutoinjectFilesInjectionTemplateYaml = []byte(`templ
       failureThreshold: {{ annotation .ObjectMeta `+"`"+`readiness.status.sidecar.istio.io/failureThreshold`+"`"+` .Values.global.proxy.readinessFailureThreshold }}
     {{ end -}}
     securityContext:
-      {{- if .Values.global.proxy.privileged }}
-      privileged: true
-      {{- end }}
-      {{- if ne .Values.global.proxy.enableCoreDump true }}
-      readOnlyRootFilesystem: true
-      {{- end }}
-      {{ if eq (annotation .ObjectMeta `+"`"+`sidecar.istio.io/interceptionMode`+"`"+` .ProxyConfig.InterceptionMode) `+"`"+`TPROXY`+"`"+` -}}
+      allowPrivilegeEscalation: {{ .Values.global.proxy.privileged }}
       capabilities:
+        {{ if eq (annotation .ObjectMeta `+"`"+`sidecar.istio.io/interceptionMode`+"`"+` .ProxyConfig.InterceptionMode) `+"`"+`TPROXY`+"`"+` -}}
         add:
         - NET_ADMIN
+        {{- end }}
+        drop:
+        - ALL
+      privileged: {{ .Values.global.proxy.privileged }}
+      readOnlyRootFilesystem: {{ not .Values.global.proxy.enableCoreDump }}
       runAsGroup: 1337
-      {{ else -}}
-      {{ if .Values.global.sds.enabled }}
-      runAsGroup: 1337
-      {{- end }}
+      {{ if eq (annotation .ObjectMeta `+"`"+`sidecar.istio.io/interceptionMode`+"`"+` .ProxyConfig.InterceptionMode) `+"`"+`TPROXY`+"`"+` -}}
+      runAsNonRoot: false
+      runAsUser: 0
+      {{- else -}}
+      runAsNonRoot: true
       runAsUser: 1337
       {{- end }}
     resources:
@@ -10087,6 +10104,7 @@ var _chartsIstioControlIstioAutoinjectValuesYaml = []byte(`sidecarInjectorWebhoo
   #   container.apparmor.security.beta.kubernetes.io/istio-init: runtime/default
   #   container.apparmor.security.beta.kubernetes.io/istio-proxy: runtime/default
   injectedAnnotations: {}
+  lifecycle: {}
 
   # If set, will use the value as injection label. The value must match the 'release' label of the injector,
   # except when 1.2 istio-injection label is used, which must be set to "enabled".
@@ -11914,6 +11932,10 @@ data:
     # Set accessLogFile to empty string to disable access log.
     accessLogFile: "{{ .Values.global.proxy.accessLogFile }}"
 
+    accessLogFormat: {{ .Values.global.proxy.accessLogFormat | quote }}
+
+    accessLogEncoding: '{{ .Values.global.proxy.accessLogEncoding }}'
+
     enableEnvoyAccessLogService: {{ .Values.global.proxy.envoyAccessLogService.enabled }}
 
     {{- if .Values.global.istioRemote }}
@@ -11980,7 +12002,7 @@ data:
     disableMixerHttpReports: false
     {{- end }}
 
-    {{- if .Values.pilot.policy.enabled }}
+    {{- if not .Values.global.disablePolicyChecks }}
 
     # Set the following variable to true to disable policy checks by the Mixer.
     # Note that metrics will still be reported to the Mixer.
@@ -11996,6 +12018,16 @@ data:
 
     {{- end }}
 
+    # Automatic protocol detection uses a set of heuristics to
+    # determine whether the connection is using TLS or not (on the
+    # server side), as well as the application protocol being used
+    # (e.g., http vs tcp). These heuristics rely on the client sending
+    # the first bits of data. For server first protocols like MySQL,
+    # MongoDB, etc., Envoy will timeout on the protocol detection after
+    # the specified period, defaulting to non mTLS plain TCP
+    # traffic. Set this field to tweak the period that Envoy will wait
+    # for the client to send the first bits of data. (MUST BE >=1ms)
+    protocolDetectionTimeout: {{ .Values.global.proxy.protocolDetectionTimeout }}
 
     # This is the k8s ingress service name, update if you used a different name
     {{- if .Values.pilot.ingress }}
@@ -39203,6 +39235,10 @@ var _versionsYaml = []byte(`- operatorVersion: 1.3.0
   operatorVersionRange: ">=1.4.3,<1.5.0"
   supportedIstioVersions: ">=1.3.3, <1.6"
   recommendedIstioVersions: 1.4.3
+- operatorVersion: 1.4.4
+  operatorVersionRange: ">=1.4.4,<1.5.0"
+  supportedIstioVersions: ">=1.3.3, <1.6"
+  recommendedIstioVersions: 1.4.4
 `)
 
 func versionsYamlBytes() ([]byte, error) {
