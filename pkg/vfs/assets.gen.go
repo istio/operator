@@ -38616,7 +38616,7 @@ spec:
       enabled: false
       replicaCount: 1
       hub: quay.io/kiali
-      tag: v1.9
+      tag: v1.15
       contextPath: /kiali
       nodeSelector: {}
       podAntiAffinityLabelSelector: []
